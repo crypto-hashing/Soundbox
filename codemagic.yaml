@@ -1,18 +1,22 @@
 workflows:
-  android-workflow:
-    name: Android Build (zip extract)
+  android:
+    name: Build Debug from ZIP
     max_build_duration: 60
     environment:
       java: 17
     scripts:
       - |
-        unzip -o sound-app.zip -d .
-        chmod +x gradlew 2>/dev/null || true
-        if [ -x ./gradlew ]; then
-          ./gradlew --no-daemon assembleDebug
-        else
-          sudo apt-get update && sudo apt-get install -y gradle
-          gradle --no-daemon assembleDebug
+        echo "Files at repo root:"; ls -la
+        # Ensure unzip is available
+        if ! command -v unzip >/dev/null 2>&1; then
+          if command -v apt-get >/dev/null 2>&1; then sudo apt-get update && sudo apt-get install -y unzip; fi
         fi
-    artifacts:
-      - app/build/outputs/**/*.apk
+        # Verify zip exists, then extract
+        [ -f sound-app.zip ] || { echo "sound-app.zip not found"; exit 1; }
+        unzip -oq sound-app.zip -d extracted
+        echo "After unzip:"; ls -la extracted
+
+        # Find project dir (folder containing settings.gradle)
+        PROJECT_DIR=$(find extracted -type f -name 'settings.gradle' -o -name 'settings.gradle.kts' -printf '%h\n' | head -n1)
+        [ -n "$PROJECT_DIR" ] || { echo "No settings.gradle inside ZIP"; exit 1; }
+        echo "Project
