@@ -1,11 +1,25 @@
 workflows:
   android-workflow:
-    name: Android Build
+    name: Android Build (no wrapper)
     max_build_duration: 60
     environment:
       java: 17
     scripts:
-      - chmod +x gradlew || true
-      - ./gradlew --no-daemon clean assembleDebug
+      - |
+        # Install Gradle if missing (works on macOS/Linux runners)
+        if ! command -v gradle >/dev/null 2>&1; then
+          if command -v brew >/dev/null 2>&1; then
+            brew update && brew install gradle
+          elif command -v apt-get >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y gradle
+          fi
+        fi
+        gradle --version
+      - |
+        # Accept SDK licenses if sdkmanager exists (safe to ignore if not)
+        if command -v sdkmanager >/dev/null 2>&1; then
+          yes | sdkmanager --licenses || true
+        fi
+      - gradle clean assembleDebug
     artifacts:
       - app/build/outputs/**/*.apk
