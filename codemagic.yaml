@@ -1,25 +1,30 @@
 workflows:
   android-workflow:
-    name: Android Build (no wrapper)
+    name: Android Build (auto-detect)
     max_build_duration: 60
     environment:
       java: 17
     scripts:
       - |
-        # Install Gradle if missing (works on macOS/Linux runners)
-        if ! command -v gradle >/dev/null 2>&1; then
-          if command -v brew >/dev/null 2>&1; then
-            brew update && brew install gradle
-          elif command -v apt-get >/dev/null 2>&1; then
+        # If the repo contains a zip, unzip it here
+        ZIP=$(ls -1 *.zip 2>/dev/null | head -n1 || true)
+        if [ -n "$ZIP" ]; then unzip -q "$ZIP" -d .; fi
+
+        # Find the folder that has settings.gradle(.kts)
+        PROJECT_DIR=$(dirname "$(git ls-files | grep -E 'settings\.gradle(\.kts)?$' | head -n1)")
+        if [ -z "$PROJECT_DIR" ]; then echo "No Gradle Android project found"; exit 1; fi
+        echo "Project dir: $PROJECT_DIR"
+        cd "$PROJECT_DIR"
+
+        # Use wrapper if present, else system gradle
+        chmod +x gradlew 2>/dev/null || true
+        if [ -x ./gradlew ]; then
+          ./gradlew --no-daemon clean assembleDebug
+        else
+          if ! command -v gradle >/dev/null 2>&1; then
             sudo apt-get update && sudo apt-get install -y gradle
           fi
+          gradle --no-daemon clean assembleDebug
         fi
-        gradle --version
-      - |
-        # Accept SDK licenses if sdkmanager exists (safe to ignore if not)
-        if command -v sdkmanager >/dev/null 2>&1; then
-          yes | sdkmanager --licenses || true
-        fi
-      - gradle clean assembleDebug
     artifacts:
-      - app/build/outputs/**/*.apk
+      - "**/app/build/outputs/**/*.apk"
