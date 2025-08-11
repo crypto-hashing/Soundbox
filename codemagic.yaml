@@ -1,33 +1,18 @@
 workflows:
   android-workflow:
-    name: Android Build (auto-find + debug)
+    name: Android Build (zip extract)
     max_build_duration: 60
     environment:
       java: 17
     scripts:
       - |
-        echo "PWD=$(pwd)"
-        echo "Top-level files:"; ls -la
-        # Unzip if a project zip is present (won't fail if none)
-        ZIP=$(ls -1 *.zip 2>/dev/null | head -n1 || true)
-        [ -n "$ZIP" ] && unzip -q "$ZIP" -d . || true
-
-        echo "Searching for settings.gradle..."
-        PROJECT_DIR=$(find . -maxdepth 4 -type f \( -name 'settings.gradle' -o -name 'settings.gradle.kts' \) -printf '%h\n' | head -n1)
-        echo "PROJECT_DIR=${PROJECT_DIR:-<not found>}"
-        if [ -z "$PROJECT_DIR" ]; then
-          echo "Repo layout:"; find . -maxdepth 3 -print
-          exit 1
-        fi
-        cd "$PROJECT_DIR"
-        echo "Now in $(pwd)"; ls -la
-
+        unzip -o sound-app.zip -d .
         chmod +x gradlew 2>/dev/null || true
         if [ -x ./gradlew ]; then
-          ./gradlew --no-daemon clean assembleDebug
+          ./gradlew --no-daemon assembleDebug
         else
           sudo apt-get update && sudo apt-get install -y gradle
-          gradle --no-daemon clean assembleDebug
+          gradle --no-daemon assembleDebug
         fi
     artifacts:
-      - "**/app/build/outputs/**/*.apk"
+      - app/build/outputs/**/*.apk
