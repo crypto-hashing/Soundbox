@@ -1,11 +1,12 @@
 workflows:
   android-workflow:
     name: Android Build
+    instance_type: linux_x2
     max_build_duration: 60
     environment:
-      android:
-        image: default
+      java: 17
     scripts:
-      - ./gradlew assembleDebug
+      - chmod +x gradlew || true
+      - ./gradlew --no-daemon clean assembleDebug
     artifacts:
       - app/build/outputs/**/*.apk
